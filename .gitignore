@@ -1,0 +1,28 @@
+# Dependencies
+node_modules
+
+# Build outputs
+dist
+.next
+out
+build
+
+# Turbo cache
+.turbo
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# pnpm lock (committed to repo — remove this line if you want to ignore it)
+# pnpm-lock.yaml

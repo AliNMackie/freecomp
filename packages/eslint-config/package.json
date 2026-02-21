@@ -1,0 +1,14 @@
+{
+    "name": "@repo/eslint-config",
+    "version": "0.0.0",
+    "private": true,
+    "license": "MIT",
+    "exports": {
+        "./next": "./next.js",
+        "./react-internal": "./react-internal.js",
+        "./base": "./base.js"
+    },
+    "peerDependencies": {
+        "eslint": ">=9.0.0"
+    }
+}
