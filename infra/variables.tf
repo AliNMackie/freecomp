@@ -37,3 +37,9 @@ variable "use_cloud_sql" {
   type        = bool
   default     = false
 }
+
+variable "db_password" {
+  description = "Password for the Cloud SQL user."
+  type        = string
+  sensitive   = true
+}

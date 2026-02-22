@@ -193,7 +193,7 @@ resource "google_cloud_run_v2_service" "sink" {
 
       env {
         name  = "DATABASE_URL"
-        value = var.database_url
+        value = var.use_cloud_sql ? "postgres://${google_sql_user.user.name}:${var.db_password}@/${google_sql_database.database.name}?host=/cloudsql/${google_sql_database_instance.instance.connection_name}" : var.database_url
       }
 
       env {
@@ -211,6 +211,13 @@ resource "google_cloud_run_v2_service" "sink" {
           cpu    = "1"
           memory = "512Mi"
         }
+      }
+    }
+
+    dynamic "cloud_sql_instance" {
+      for_each = var.use_cloud_sql ? [google_sql_database_instance.instance.connection_name] : []
+      content {
+        instances = [cloud_sql_instance.value]
       }
     }
   }
