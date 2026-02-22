@@ -1,0 +1,17 @@
+[build]
+  command = "pnpm build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+  PNPM_VERSION = "9.0.0"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[[redirects]]
+  from = "/*"
+  to = "/.next/server/pages/:splat"
+  status = 200
+  force = true
+  conditions = {Role = ["admin"]}

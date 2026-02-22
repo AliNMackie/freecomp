@@ -29,7 +29,28 @@ function createPool(): Pool {
 }
 
 // Reuse the pool across hot-reloads in development; always create fresh in prod.
-export const pool: Pool =
-    process.env.NODE_ENV === "production"
-        ? createPool()
-        : (globalThis.__pgPool ??= createPool());
+let _pool: Pool | undefined;
+
+export const getPool = (): Pool => {
+    if (process.env.NODE_ENV === "production") {
+        if (!_pool) _pool = createPool();
+        return _pool;
+    }
+    // Development logic
+    if (!globalThis.__pgPool) {
+        globalThis.__pgPool = createPool();
+    }
+    return globalThis.__pgPool;
+};
+
+// For compatibility with existing imports, use a Proxy to defer pool initialization.
+export const pool = new Proxy({} as Pool, {
+    get: (target, prop) => {
+        const p = getPool();
+        const val = (p as any)[prop];
+        if (typeof val === 'function') {
+            return val.bind(p);
+        }
+        return val;
+    }
+});

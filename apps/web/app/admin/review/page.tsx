@@ -71,7 +71,7 @@ async function fetchPendingReview(): Promise<ReviewRow[]> {
      LIMIT 50`
     );
 
-    return rows.map((r) => ({
+    return rows.map((r: any) => ({
         id: r.id,
         title: r.title,
         sourceSite: r.source_site,
@@ -97,30 +97,15 @@ export const dynamic = "force-dynamic"; // never cache — always fresh data
 
 export default async function AdminReviewPage({ searchParams }: PageProps) {
     if (!isAuthorised(searchParams)) {
-        // Return a 401-equivalent — notFound() gives 404 which is also fine for
-        // security-through-obscurity, but we prefer an explicit rejection.
         return (
-            <html>
-                <body
-                    style={{
-                        fontFamily: "system-ui, sans-serif",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        height: "100vh",
-                        margin: 0,
-                        background: "#0f172a",
-                        color: "#f1f5f9",
-                    }}
-                >
-                    <div style={{ textAlign: "center" }}>
-                        <h1 style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>401</h1>
-                        <p style={{ color: "#94a3b8" }}>
-                            Provide a valid <code>?key=</code> or Authorization header.
-                        </p>
-                    </div>
-                </body>
-            </html>
+            <div className="flex items-center justify-center min-h-screen bg-slate-900 text-slate-100">
+                <div className="text-center">
+                    <h1 className="text-3xl font-bold mb-2">401</h1>
+                    <p className="text-slate-400">
+                        Provide a valid <code>?key=</code> or Authorization header.
+                    </p>
+                </div>
+            </div>
         );
     }
 
@@ -136,60 +121,23 @@ export default async function AdminReviewPage({ searchParams }: PageProps) {
     const adminKey = searchParams["key"] ?? "";
 
     return (
-        <html lang="en">
-            <head>
-                <meta charSet="utf-8" />
-                <meta name="viewport" content="width=device-width, initial-scale=1" />
-                <title>Admin Review — UKFreeComps</title>
-            </head>
-            <body
-                style={{
-                    fontFamily: "system-ui, sans-serif",
-                    margin: 0,
-                    padding: "1.5rem",
-                    background: "#f1f5f9",
-                    minHeight: "100vh",
-                }}
-            >
-                <header
-                    style={{
-                        marginBottom: "1.5rem",
-                        display: "flex",
-                        alignItems: "baseline",
-                        gap: "1rem",
-                    }}
-                >
-                    <h1
-                        style={{
-                            fontSize: "1.25rem",
-                            fontWeight: 700,
-                            color: "#0f172a",
-                            margin: 0,
-                        }}
-                    >
-                        🔍 Admin Review Queue
-                    </h1>
-                    <span style={{ fontSize: "0.875rem", color: "#64748b" }}>
-                        is_free=true · hype≥7 · verified · 50 most recent
-                    </span>
-                </header>
+        <div className="min-h-screen bg-slate-100 p-6 font-sans">
+            <header className="flex items-baseline gap-4 mb-6">
+                <h1 className="text-xl font-bold text-slate-900">
+                    🔍 Admin Review Queue
+                </h1>
+                <span className="text-sm text-slate-500">
+                    is_free=true · hype≥7 · verified · 50 most recent
+                </span>
+            </header>
 
-                {dbError ? (
-                    <div
-                        style={{
-                            background: "#fef2f2",
-                            border: "1px solid #fca5a5",
-                            borderRadius: 6,
-                            padding: "1rem",
-                            color: "#dc2626",
-                        }}
-                    >
-                        ⚠️ Database error — could not load competitions.
-                    </div>
-                ) : (
-                    <ReviewTable rows={rows} adminKey={adminKey} />
-                )}
-            </body>
-        </html>
+            {dbError ? (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-600">
+                    ⚠️ Database error — could not load competitions.
+                </div>
+            ) : (
+                <ReviewTable rows={rows} adminKey={adminKey} />
+            )}
+        </div>
     );
 }
