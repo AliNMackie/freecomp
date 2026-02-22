@@ -1,0 +1,90 @@
+name: Agents — Build & Deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/agents/**"
+      - "infra/**"
+      - ".github/workflows/agents.yml"
+
+env:
+  REGION: europe-west2
+  SCOUT_IMAGE: gcr.io/${{ secrets.GCP_PROJECT_ID }}/scout
+
+jobs:
+  deploy-scout:
+    name: Build & Deploy scout-agent
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # required for Workload Identity Federation
+
+    steps:
+      # ── Checkout ────────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Toolchain ───────────────────────────────────────────────────────────
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Set up pnpm 8
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+          run_install: false
+
+      - name: Get pnpm store path
+        id: pnpm-cache
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+      - name: Restore pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # ── Google Cloud auth (Workload Identity Federation) ─────────────────────
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker gcr.io --quiet
+
+      # ── Build & push Docker image ────────────────────────────────────────────
+      - name: Build Docker image
+        run: |
+          docker build \
+            --tag ${{ env.SCOUT_IMAGE }}:${{ github.sha }} \
+            --tag ${{ env.SCOUT_IMAGE }}:latest \
+            --file packages/agents/scout/Dockerfile \
+            .
+
+      - name: Push Docker image
+        run: |
+          docker push ${{ env.SCOUT_IMAGE }}:${{ github.sha }}
+          docker push ${{ env.SCOUT_IMAGE }}:latest
+
+      # ── Deploy to Cloud Run ──────────────────────────────────────────────────
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy scout-agent \
+            --image ${{ env.SCOUT_IMAGE }}:${{ github.sha }} \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --quiet

@@ -26,3 +26,6 @@ Thumbs.db
 
 # pnpm lock (committed to repo — remove this line if you want to ignore it)
 # pnpm-lock.yaml
+
+# Prototype
+prototype/
