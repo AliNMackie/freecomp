@@ -2,7 +2,7 @@
 # (Safe to apply even if already enabled — Terraform is idempotent here.)
 
 resource "google_project_service" "cloudscheduler" {
-  project            = var.project
+  project            = var.project_id
   service            = "cloudscheduler.googleapis.com"
   disable_on_destroy = false
 }
@@ -14,7 +14,7 @@ resource "google_project_service" "cloudscheduler" {
 # explicit one scoped to the scheduler context for clarity and auditability.
 
 resource "google_cloud_run_service_iam_member" "scheduler_scout_invoker" {
-  project  = var.project
+  project  = var.project_id
   location = var.region
   service  = google_cloud_run_v2_service.scout.name
   role     = "roles/run.invoker"
@@ -26,7 +26,7 @@ resource "google_cloud_run_service_iam_member" "scheduler_scout_invoker" {
 resource "google_cloud_scheduler_job" "scout_hourly" {
   name             = "scout-hourly-trigger"
   description      = "Triggers the scout agent every hour to crawl competition listings."
-  project          = var.project
+  project          = var.project_id
   region           = var.region
   schedule         = "0 * * * *" # top of every hour
   time_zone        = "Europe/London"
