@@ -46,16 +46,36 @@ const DEFAULT_SEED_SITES: SeedSite[] = [
         url: "https://www.magicfreebies.co.uk/competitions/",
         type: "aggregator",
     },
+    {
+        name: "LatestFreeStuff Competitions",
+        url: "https://www.latestfreestuff.co.uk/free-competitions/",
+        type: "aggregator",
+    },
+    {
+        name: "Competitions Time",
+        url: "https://www.competitions-time.co.uk/",
+        type: "aggregator",
+    },
+    {
+        name: "SuperLucky",
+        url: "https://superlucky.me/",
+        type: "aggregator",
+    },
 
     // ── Brand pages ──────────────────────────────────────────────────────────────
     {
-        name: "Example Brand A",
-        url: "https://example.com/competitions",
+        name: "Lidl Prize Draws",
+        url: "https://www.lidl.co.uk/c/free-prize-draws",
         type: "brand",
     },
     {
-        name: "Example Brand B",
-        url: "https://brand-b.example.com/win",
+        name: "Tesco Competitions",
+        url: "https://www.tesco.com/competitions/",
+        type: "brand",
+    },
+    {
+        name: "Asda Competitions",
+        url: "https://www.asda.com/competitions",
         type: "brand",
     },
 
@@ -68,6 +88,11 @@ const DEFAULT_SEED_SITES: SeedSite[] = [
     {
         name: "HotUKDeals Competitions",
         url: "https://www.hotukdeals.com/tag/competition",
+        type: "forum",
+    },
+    {
+        name: "Loquax Forums",
+        url: "https://www.loquax.co.uk/forums/",
         type: "forum",
     },
 ];
