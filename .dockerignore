@@ -1,0 +1,11 @@
+.git
+node_modules
+dist
+.next
+.turbo
+apps
+packages/**/node_modules
+packages/**/dist
+*.tfvars
+*.tfstate
+infra/.terraform

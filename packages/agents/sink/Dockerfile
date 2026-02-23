@@ -1,45 +1,29 @@
-# ── Build stage ───────────────────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:20-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN npm install -g pnpm
 
 WORKDIR /app
 
-# Copy workspace manifests for dependency caching
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY packages/shared/package.json            ./packages/shared/
-COPY packages/agents/sink/package.json       ./packages/agents/sink/
+# Copy the entire monorepo to ensure all workspace dependencies and manifests are present
+COPY . .
 
-RUN npm install -g pnpm && pnpm install --frozen-lockfile
+# Install all dependencies (frozen lockfile for stability)
+RUN pnpm install --frozen-lockfile
 
-# Copy source
-COPY packages/shared/       ./packages/shared/
-COPY packages/agents/sink/  ./packages/agents/sink/
-
-# Build shared package first, then sink
-RUN pnpm --filter @ukfreecomps/shared build || true
+# Build the sink agent (and shared if needed)
 RUN pnpm --filter @ukfreecomps/sink build
 
-# ── Runtime stage ─────────────────────────────────────────────────────────────
-FROM node:20-alpine AS runner
-
-WORKDIR /app
-
+# Runtime config
 ENV NODE_ENV=production
-
-# Only production deps
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY packages/shared/package.json            ./packages/shared/
-COPY packages/agents/sink/package.json       ./packages/agents/sink/
-
-RUN npm install -g pnpm && \
-    pnpm install --frozen-lockfile --prod && \
-    addgroup -S appgroup && \
-    adduser  -S appuser -G appgroup
-
-# Copy compiled output
-COPY --from=builder /app/packages/shared/dist  ./packages/shared/dist
-COPY --from=builder /app/packages/agents/sink/dist ./packages/agents/sink/dist
-
-USER appuser
+ENV PORT=8080
 
 EXPOSE 8080
-CMD ["node", "packages/agents/sink/dist/index.js"]
+
+# Run from the package directory
+WORKDIR /app/packages/agents/sink
+CMD ["node", "dist/index.js"]

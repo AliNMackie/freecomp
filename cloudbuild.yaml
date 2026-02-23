@@ -1,0 +1,14 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'gcr.io/freecomp-488221/scout:latest', '-f', 'packages/agents/scout/Dockerfile', '.']
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'gcr.io/freecomp-488221/converter:latest', '-f', 'packages/agents/converter/Dockerfile', '.']
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'gcr.io/freecomp-488221/validator:latest', '-f', 'packages/agents/validator/Dockerfile', '.']
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'gcr.io/freecomp-488221/sink:latest', '-f', 'packages/agents/sink/Dockerfile', '.']
+images:
+- 'gcr.io/freecomp-488221/scout:latest'
+- 'gcr.io/freecomp-488221/converter:latest'
+- 'gcr.io/freecomp-488221/validator:latest'
+- 'gcr.io/freecomp-488221/sink:latest'

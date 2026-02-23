@@ -1,39 +1,6 @@
-# =============================================================================
-# Builder stage
-# Build context must be the monorepo root:
-#   docker build -f packages/agents/scout/Dockerfile -t scout .
-# =============================================================================
-FROM node:20-slim AS builder
+FROM node:20-slim
 
-# Install pnpm globally
-RUN npm install -g pnpm
-
-WORKDIR /app
-
-# Copy workspace manifests first for better layer caching
-COPY pnpm-lock.yaml          ./pnpm-lock.yaml
-COPY pnpm-workspace.yaml     ./pnpm-workspace.yaml
-COPY package.json            ./package.json
-
-# Copy only the manifests of packages that scout depends on
-COPY packages/agents/scout/package.json ./packages/agents/scout/package.json
-
-# Puppeteer tries to download Chromium during npm/pnpm install — skip it here;
-# we supply the system Chromium in the runtime stage instead.
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-
-# Install only scout's dependency tree (production deps only)
-RUN pnpm install --frozen-lockfile --filter @ukfreecomps/scout
-
-# Copy scout source
-COPY packages/agents/scout/src ./packages/agents/scout/src
-
-# =============================================================================
-# Runtime stage
-# =============================================================================
-FROM node:20-slim AS runner
-
-# Install Chromium and all shared libraries Puppeteer needs on Debian slim
+# Install system dependencies for Chromium
 RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium \
     fonts-liberation \
@@ -64,23 +31,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xdg-utils \
     && rm -rf /var/lib/apt/lists/*
 
-# Tell Puppeteer to use the system Chromium and not to download its own
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-
-ENV NODE_ENV=production
+RUN npm install -g pnpm
 
 WORKDIR /app
 
-# Copy the installed node_modules and built source from builder
-COPY --from=builder /app/packages/agents/scout/node_modules ./node_modules
-COPY --from=builder /app/packages/agents/scout/src           ./src
-COPY --from=builder /app/packages/agents/scout/package.json  ./package.json
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY packages/agents/scout/package.json ./packages/agents/scout/package.json
 
-# Run as non-root for security; Puppeteer requires --no-sandbox when non-root
+# Skip Chromium download during install
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
+RUN pnpm install --frozen-lockfile --filter @ukfreecomps/scout
+
+COPY packages/agents/scout/src ./packages/agents/scout/src
+
+ENV NODE_ENV=production
 RUN addgroup --system scout && adduser --system --ingroup scout scout
 USER scout
 
 EXPOSE 8080
-
+WORKDIR /app/packages/agents/scout
 CMD ["node", "src/index.js"]

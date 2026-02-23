@@ -212,12 +212,23 @@ resource "google_cloud_run_v2_service" "sink" {
           memory = "512Mi"
         }
       }
+
+      dynamic "volume_mounts" {
+        for_each = var.use_cloud_sql ? [1] : []
+        content {
+          name       = "cloudsql"
+          mount_path = "/cloudsql"
+        }
+      }
     }
 
-    dynamic "cloud_sql_instance" {
-      for_each = var.use_cloud_sql ? [google_sql_database_instance.instance.connection_name] : []
+    dynamic "volumes" {
+      for_each = var.use_cloud_sql ? [1] : []
       content {
-        instances = [cloud_sql_instance.value]
+        name = "cloudsql"
+        cloud_sql_instance {
+          instances = [google_sql_database_instance.instance.connection_name]
+        }
       }
     }
   }

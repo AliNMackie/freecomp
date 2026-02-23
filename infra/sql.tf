@@ -15,10 +15,10 @@ resource "google_sql_database_instance" "instance" {
       ipv4_enabled = true
       
       # For security, you might want to restrict authorized networks later
-      # authorized_networks {
-      #   name  = "all"
-      #   value = "0.0.0.0/0"
-      # }
+      authorized_networks {
+        name  = "all"
+        value = "0.0.0.0/0"
+      }
     }
 
     backup_configuration {

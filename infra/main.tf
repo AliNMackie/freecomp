@@ -75,7 +75,7 @@ resource "google_pubsub_topic_iam_member" "agents_publish_validator" {
 
 resource "google_project_iam_member" "agents_subscriber" {
   project = var.project_id
-  role    = "roles/pubsub.subscriber"
+  role    = "roles/pubsub.editor"
   member  = "serviceAccount:${google_service_account.agents.email}"
 }
 

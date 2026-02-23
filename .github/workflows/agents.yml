@@ -11,15 +11,18 @@ on:
 
 env:
   REGION: europe-west2
-  SCOUT_IMAGE: gcr.io/${{ secrets.GCP_PROJECT_ID }}/scout
 
 jobs:
-  deploy-scout:
-    name: Build & Deploy scout-agent
+  deploy-agents:
+    name: Build & Deploy Agent Services
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write   # required for Workload Identity Federation
+
+    strategy:
+      matrix:
+        agent: [scout, converter, validator, sink]
 
     steps:
       # ── Checkout ────────────────────────────────────────────────────────────
@@ -70,21 +73,21 @@ jobs:
       - name: Build Docker image
         run: |
           docker build \
-            --tag ${{ env.SCOUT_IMAGE }}:${{ github.sha }} \
-            --tag ${{ env.SCOUT_IMAGE }}:latest \
-            --file packages/agents/scout/Dockerfile \
+            --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ matrix.agent }}:${{ github.sha }} \
+            --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ matrix.agent }}:latest \
+            --file packages/agents/${{ matrix.agent }}/Dockerfile \
             .
 
       - name: Push Docker image
         run: |
-          docker push ${{ env.SCOUT_IMAGE }}:${{ github.sha }}
-          docker push ${{ env.SCOUT_IMAGE }}:latest
+          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ matrix.agent }}:${{ github.sha }}
+          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ matrix.agent }}:latest
 
       # ── Deploy to Cloud Run ──────────────────────────────────────────────────
       - name: Deploy to Cloud Run
         run: |
-          gcloud run deploy scout-agent \
-            --image ${{ env.SCOUT_IMAGE }}:${{ github.sha }} \
+          gcloud run deploy ${{ matrix.agent }}-agent \
+            --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ matrix.agent }}:${{ github.sha }} \
             --region ${{ env.REGION }} \
             --platform managed \
             --quiet
