@@ -79,6 +79,32 @@ resource "google_project_iam_member" "agents_subscriber" {
   member  = "serviceAccount:${google_service_account.agents.email}"
 }
 
+# ─── Roles for GitHub Actions CI/CD ──────────────────────────────────────────
+
+resource "google_project_iam_member" "agents_artifactregistry_writer" {
+  project = var.project_id
+  role    = "roles/artifactregistry.writer"
+  member  = "serviceAccount:${google_service_account.agents.email}"
+}
+
+resource "google_project_iam_member" "agents_storage_admin" {
+  project = var.project_id
+  role    = "roles/storage.admin"   # Required for legacy gcr.io
+  member  = "serviceAccount:${google_service_account.agents.email}"
+}
+
+resource "google_project_iam_member" "agents_run_developer" {
+  project = var.project_id
+  role    = "roles/run.admin"
+  member  = "serviceAccount:${google_service_account.agents.email}"
+}
+
+resource "google_project_iam_member" "agents_service_account_user" {
+  project = var.project_id
+  role    = "roles/iam.serviceAccountUser"
+  member  = "serviceAccount:${google_service_account.agents.email}"
+}
+
 # ─── Outputs ──────────────────────────────────────────────────────────────────
 
 output "agents_service_account_email" {

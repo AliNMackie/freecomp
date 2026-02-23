@@ -36,4 +36,10 @@ resource "google_project_service" "build" {
   disable_on_destroy = false
 }
 
+resource "google_project_service" "artifactregistry" {
+  project            = var.project_id
+  service            = "artifactregistry.googleapis.com"
+  disable_on_destroy = false
+}
+
 # Cloud Scheduler is already handled in scheduler.tf
