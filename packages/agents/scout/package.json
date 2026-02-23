@@ -2,6 +2,7 @@
     "name": "@ukfreecomps/scout",
     "version": "0.1.0",
     "private": true,
+    "//": "Trigger deployment for secret removal and alignment fix",
     "description": "Scout agent — discovers and indexes competition listings via headless browsing",
     "main": "src/index.ts",
     "scripts": {
