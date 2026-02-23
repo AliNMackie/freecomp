@@ -38,7 +38,23 @@ resource "google_cloud_run_v2_service" "scout" {
       resources {
         limits = {
           cpu    = "1"
-          memory = "512Mi"
+          memory = "1Gi"
+        }
+      }
+
+      startup_probe {
+        timeout_seconds   = 10
+        period_seconds    = 10
+        failure_threshold = 3
+        tcp_socket {
+          port = 8080
+        }
+      }
+
+      liveness_probe {
+        http_get {
+          path = "/health"
+          port = 8080
         }
       }
     }
@@ -101,6 +117,22 @@ resource "google_cloud_run_v2_service" "converter" {
           memory = "512Mi"
         }
       }
+
+      startup_probe {
+        timeout_seconds   = 10
+        period_seconds    = 10
+        failure_threshold = 3
+        tcp_socket {
+          port = 8080
+        }
+      }
+
+      liveness_probe {
+        http_get {
+          path = "/health"
+          port = 8080
+        }
+      }
     }
   }
 
@@ -161,6 +193,22 @@ resource "google_cloud_run_v2_service" "validator" {
           memory = "512Mi"
         }
       }
+
+      startup_probe {
+        timeout_seconds   = 10
+        period_seconds    = 10
+        failure_threshold = 3
+        tcp_socket {
+          port = 8080
+        }
+      }
+
+      liveness_probe {
+        http_get {
+          path = "/health"
+          port = 8080
+        }
+      }
     }
   }
 
@@ -210,6 +258,22 @@ resource "google_cloud_run_v2_service" "sink" {
         limits = {
           cpu    = "1"
           memory = "512Mi"
+        }
+      }
+
+      startup_probe {
+        timeout_seconds   = 10
+        period_seconds    = 10
+        failure_threshold = 3
+        tcp_socket {
+          port = 8080
+        }
+      }
+
+      liveness_probe {
+        http_get {
+          path = "/health"
+          port = 8080
         }
       }
 

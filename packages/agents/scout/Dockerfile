@@ -35,21 +35,29 @@ RUN npm install -g pnpm
 
 WORKDIR /app
 
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
-COPY packages/agents/scout/package.json ./packages/agents/scout/package.json
+# Copy the entire monorepo to ensure all workspace dependencies (@ukfreecomps/shared) are present
+COPY . .
 
 # Skip Chromium download during install
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
-RUN pnpm install --frozen-lockfile --filter @ukfreecomps/scout
+# Install dependencies (frozen lockfile for stability)
+RUN pnpm install --frozen-lockfile
 
-COPY packages/agents/scout/src ./packages/agents/scout/src
+# Build the scout agent (and shared)
+RUN pnpm --filter @ukfreecomps/scout build
 
+# Runtime config
 ENV NODE_ENV=production
+ENV PORT=8080
+
 RUN addgroup --system scout && adduser --system --ingroup scout scout
+RUN chown -R scout:scout /app
 USER scout
 
 EXPOSE 8080
+
+# Run from the package directory
 WORKDIR /app/packages/agents/scout
-CMD ["pnpm", "start"]
+CMD ["node", "dist/index.js"]

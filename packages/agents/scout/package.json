@@ -5,7 +5,8 @@
     "description": "Scout agent — discovers and indexes competition listings via headless browsing",
     "main": "src/index.ts",
     "scripts": {
-        "start": "tsx src/index.ts",
+        "build": "tsc",
+        "start": "node dist/index.js",
         "dev": "tsx watch src/index.ts"
     },
     "dependencies": {
@@ -13,6 +14,10 @@
         "@ukfreecomps/shared": "workspace:*",
         "puppeteer": "^21.0.0",
         "tsx": "^4.21.0"
+    },
+    "devDependencies": {
+        "@repo/typescript-config": "workspace:*",
+        "typescript": "^5.6.3"
     },
     "engines": {
         "node": ">=20"
