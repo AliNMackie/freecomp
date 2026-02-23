@@ -52,4 +52,4 @@ USER scout
 
 EXPOSE 8080
 WORKDIR /app/packages/agents/scout
-CMD ["node", "src/index.js"]
+CMD ["pnpm", "start"]
