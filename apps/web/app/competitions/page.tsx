@@ -1,18 +1,85 @@
 import Link from "next/link";
+import { pool } from "@/lib/db";
 import type { Competition } from "@ukfreecomps/shared";
 
-// ─── Data fetching ────────────────────────────────────────────────────────────
+// ─── Data fetching (Direct DB Access) ──────────────────────────────────────────
 
-async function fetchCompetitions(params: Record<string, string>): Promise<Competition[]> {
-    const qs = new URLSearchParams(params).toString();
-    const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+interface CompetitionRow {
+    id: string;
+    source_url: string;
+    source_site: string;
+    title: string;
+    prize_summary: string | null;
+    prize_value_estimate: string | null;
+    closes_at: Date | null;
+    is_free: boolean;
+    has_skill_question: boolean;
+    entry_time_estimate: string | null;
+    hype_score: string;
+    curated_summary: string;
+    discovered_at: Date;
+    verified_at: Date | null;
+}
+
+function rowToCompetition(row: CompetitionRow): Competition {
+    return {
+        id: row.id,
+        sourceUrl: row.source_url,
+        sourceSite: row.source_site,
+        title: row.title,
+        prizeSummary: row.prize_summary,
+        prizeValueEstimate: row.prize_value_estimate ? parseFloat(row.prize_value_estimate) : null,
+        closesAt: row.closes_at ? row.closes_at.toISOString() : null,
+        isFree: row.is_free,
+        hasSkillQuestion: row.has_skill_question,
+        entryTimeEstimate: row.entry_time_estimate ?? "unknown",
+        hypeScore: parseFloat(row.hype_score),
+        curatedSummary: row.curated_summary,
+        discoveredAt: row.discovered_at.toISOString(),
+        verifiedAt: row.verified_at ? row.verified_at.toISOString() : null,
+    };
+}
+
+async function getCompetitions(params: {
+    q?: string,
+    sort?: string,
+    isFree?: string,
+    limit?: number
+}): Promise<Competition[]> {
+    const conditions: string[] = [];
+    const values: unknown[] = [];
+
+    if (params.isFree === "true") {
+        conditions.push(`is_free = $${values.length + 1}`);
+        values.push(true);
+    } else if (params.isFree === "false") {
+        conditions.push(`is_free = $${values.length + 1}`);
+        values.push(false);
+    }
+
+    if (params.q) {
+        conditions.push(`(title ILIKE $${values.length + 1} OR prize_summary ILIKE $${values.length + 1} OR curated_summary ILIKE $${values.length + 1})`);
+        values.push(`%${params.q}%`);
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+    const orderBy = params.sort === "hype"
+        ? "ORDER BY hype_score DESC"
+        : "ORDER BY closes_at NULLS LAST, hype_score DESC";
+
+    const limit = params.limit ?? 50;
+
     try {
-        const res = await fetch(`${base}/api/competitions?${qs}`, {
-            next: { revalidate: 60 },
-        });
-        if (!res.ok) return [];
-        return res.json() as Promise<Competition[]>;
-    } catch {
+        const result = await pool.query<CompetitionRow>(`
+            SELECT * FROM competitions 
+            ${where} 
+            ${orderBy} 
+            LIMIT $${values.length + 1}
+        `, [...values, limit]);
+        return result.rows.map(rowToCompetition);
+    } catch (err) {
+        console.error("[CompetitionsPage] DB error:", err);
         return [];
     }
 }
@@ -96,18 +163,22 @@ interface PageProps {
 export const dynamic = "force-dynamic";
 
 export default async function CompetitionsPage({ searchParams }: PageProps) {
-    const isFreeParam = searchParams["isFree"];
-    const qParam = searchParams["q"];
+    const isFreeParam = searchParams["isFree"] as string | undefined;
+    const qParam = searchParams["q"] as string | undefined;
     const sortParam = (searchParams["sort"] as string | undefined) ?? "closing";
-    const limitParam = searchParams["limit"];
+    const limitParam = searchParams["limit"] as string | undefined;
 
-    const params: Record<string, string> = { sort: sortParam };
-    if (isFreeParam === "true") params["isFree"] = "true";
-    if (isFreeParam === "false") params["isFree"] = "false";
-    if (typeof limitParam === "string") params["limit"] = limitParam;
-    if (typeof qParam === "string") params["q"] = qParam;
+    const competitions = await getCompetitions({
+        q: qParam,
+        sort: sortParam,
+        isFree: isFreeParam,
+        limit: limitParam ? parseInt(limitParam, 10) : 50
+    });
 
-    const competitions = await fetchCompetitions(params);
+    const params = new URLSearchParams();
+    if (isFreeParam) params.set("isFree", isFreeParam);
+    if (qParam) params.set("q", qParam);
+    if (sortParam) params.set("sort", sortParam);
 
     return (
         <main className="min-h-screen bg-slate-50 dark:bg-slate-950">
