@@ -31,7 +31,7 @@ export const CompetitionCard: React.FC<CompetitionCardProps> = ({ comp }) => {
     const hypeHigh = comp.hypeScore >= 8;
 
     return (
-        <div className="group relative bg-white border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50 transition-colors">
+        <article className="group relative bg-white border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50 transition-colors">
 
             {/* --- DESKTOP LAYOUT --- */}
             <div className="hidden lg:grid grid-cols-12 gap-4 px-4 py-3 items-center min-h-[88px]">
@@ -76,9 +76,9 @@ export const CompetitionCard: React.FC<CompetitionCardProps> = ({ comp }) => {
 
                     <div className="flex flex-col gap-0.5">
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Closes</span>
-                        <span className="text-xs font-medium tabular-nums text-slate-600">
+                        <time dateTime={comp.closesAt || undefined} className="text-xs font-medium tabular-nums text-slate-600">
                             {closingDateStr}
-                        </span>
+                        </time>
                     </div>
                 </div>
 
@@ -125,7 +125,7 @@ export const CompetitionCard: React.FC<CompetitionCardProps> = ({ comp }) => {
                         </div>
                         <h3 className="text-sm font-bold text-slate-900 leading-tight mb-1 pr-2 truncate">{comp.title}</h3>
                         <div className="flex items-center gap-3 text-xs text-slate-500 mt-1.5">
-                            <span className="tabular-nums">Ends {closingDateStr}</span>
+                            <time dateTime={comp.closesAt || undefined} className="tabular-nums">Ends {closingDateStr}</time>
                             <span className="text-slate-300">•</span>
                             <EffortBadge level={comp.entryTimeEstimate.includes('30') ? 'Low' : 'Medium'} />
                         </div>
@@ -151,6 +151,6 @@ export const CompetitionCard: React.FC<CompetitionCardProps> = ({ comp }) => {
                     </div>
                 </div>
             </div>
-        </div>
+        </article>
     );
 };

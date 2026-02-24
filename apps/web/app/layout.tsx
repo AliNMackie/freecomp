@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     authors: [{ name: "UKFreeComps" }],
     creator: "UKFreeComps",
     publisher: "UKFreeComps",
-    metadataBase: new URL("https://iaifreecomp.netlify.app"), // Replace with actual production URL later
+    metadataBase: new URL("https://ukfreecomps.com"), // Production URL
     openGraph: {
         type: "website",
         locale: "en_GB",

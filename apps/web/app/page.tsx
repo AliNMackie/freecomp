@@ -88,8 +88,39 @@ export default async function HomePage() {
         getCompetitions({ sort: "hype", limit: 2 }), // Top 2 for featured
     ]);
 
+    // Generate JSON-LD for SGO (Search Generative Optimization)
+    // This helps AI search engines index the list as a high-fidelity catalog.
+    const jsonLd = {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        "name": "Latest Free UK Competitions",
+        "description": "A curated list of genuinely free UK prize draws.",
+        "itemListElement": allComps.map((comp, index) => ({
+            "@type": "ListItem",
+            "position": index + 1,
+            "item": {
+                "@type": "Offer", // Using Offer as it's a promotion
+                "name": comp.title,
+                "description": comp.prizeSummary,
+                "url": comp.sourceUrl,
+                "offeredBy": {
+                    "@type": "Organization",
+                    "name": comp.sourceSite
+                },
+                "availability": "https://schema.org/InStock",
+                "price": "0",
+                "priceCurrency": "GBP"
+            }
+        }))
+    };
+
     return (
         <div className="min-h-screen bg-[#f8fafc] font-sans text-slate-900 flex flex-col">
+            {/* Structured Data for engines & GenAI */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
 
             {/* Header */}
             <header className="sticky top-0 z-30 bg-white border-b border-slate-200">
