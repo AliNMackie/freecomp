@@ -153,22 +153,22 @@ function buildSummaryPrompt(
     return `You are helping write short, human-sounding descriptions of online prize competitions for a UK competition listing site.
 
 Input:
-- Title: ${title}
-- Source site: ${sourceSite}
+- Proposed Title: ${title}
+- Found on: ${sourceSite} (This is the aggregator or forum, NOT necessarily the prize provider)
 - HTML snippet: ${htmlExcerpt.slice(0, HTML_EXCERPT_CHARS)}
 
 Task:
 Write 2–3 natural sentences that:
-- Explain what the prize is and roughly who it's for.
-- Mention that it's run by ${sourceSite}.
-- Briefly describe how easy it is to enter (simple form vs social steps vs complex tasks).
-- Do NOT copy text verbatim from the HTML; always paraphrase.
+- Identify the REAL prize being offered.
+- Identify the ACTUAL brand running the competition if mentioned (e.g. "Lidl", "Tesco", "Magic Radio").
+- Briefly describe the entry method (e.g. "simple form", "social media share", "trivia question").
+- Sounds like a real human "comper" recommending it to a friend.
 
-Tone:
-- Friendly but concise.
-- Sounds like a real human "comper" recommending it.
-
-Return only the description text, no JSON, no quotes around it.`;
+Constraints:
+- Do NOT describe ${sourceSite} itself (we know it's a listing site).
+- If the HTML appears to be just an advertisement for ${sourceSite}, return "HOUSE_AD".
+- Do NOT copy text verbatim; always paraphrase.
+- Return only the description text, no JSON or quotes.`;
 }
 
 /**

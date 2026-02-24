@@ -13,6 +13,7 @@
     "dependencies": {
         "@google-cloud/pubsub": "^4.0.0",
         "@ukfreecomps/shared": "workspace:*",
+        "cheerio": "^1.2.0",
         "puppeteer": "^21.0.0",
         "tsx": "^4.21.0"
     },

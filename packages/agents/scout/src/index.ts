@@ -7,6 +7,7 @@
  */
 
 import http from "http";
+import * as cheerio from "cheerio";
 import { PubSub } from "@google-cloud/pubsub";
 import { SEED_SITES, MAX_PAGES_PER_SITE, CRAWL_INTERVAL_SECONDS, SEED_CONFIG_SOURCE } from "./config";
 import type { SeedSite } from "./config";
@@ -153,6 +154,106 @@ async function isAllowed(url: string): Promise<boolean> {
     return true;
 }
 
+// ─── Link Discovery ───────────────────────────────────────────────────────────
+
+interface DiscoveredEntry {
+    url: string;
+    title: string;
+    context: string;
+}
+
+/**
+ * Heuristics to extract individual competition links and their surrounding context.
+ */
+function discoverLinks(html: string, baseUrl: string, siteType: string): DiscoveredEntry[] {
+    const $ = cheerio.load(html);
+    const results: DiscoveredEntry[] = [];
+    const seenUrls = new Set<string>();
+
+    // Common containers for individual listings
+    const entrySelectors = [
+        "li",
+        "article",
+        "tr",
+        ".competition",
+        ".listing",
+        ".thread",
+        ".post",
+        ".item",
+    ];
+
+    // Attempt to find structured entries first
+    let foundStructured = false;
+    for (const selector of entrySelectors) {
+        const potentialEntries = $(selector).has("a");
+        if (potentialEntries.length >= 5) {
+            // High confidence it's a list
+            potentialEntries.each((_, el) => {
+                const link = $(el).find("a").first();
+                const href = link.attr("href");
+                if (!href) return;
+
+                try {
+                    const absoluteUrl = new URL(href, baseUrl).toString();
+                    if (seenUrls.has(absoluteUrl)) return;
+
+                    // Filter out noise
+                    const lowerHref = absoluteUrl.toLowerCase();
+                    if (lowerHref.includes("login") || lowerHref.includes("register")) return;
+                    if (lowerHref.includes("terms") || lowerHref.includes("privacy")) return;
+
+                    const title = link.text().trim() || $(el).text().trim().slice(0, 50);
+                    if (title.length < 5) return;
+
+                    results.push({
+                        url: absoluteUrl,
+                        title,
+                        context: $.html(el), // Focused HTML for this one entry
+                    });
+                    seenUrls.add(absoluteUrl);
+                } catch {
+                    /* ignore */
+                }
+            });
+            foundStructured = true;
+            break;
+        }
+    }
+
+    // Fallback: Just grab and Filter every link if no structure found
+    if (!foundStructured) {
+        $("a").each((_, el) => {
+            const href = $(el).attr("href");
+            if (!href) return;
+
+            try {
+                const absoluteUrl = new URL(href, baseUrl).toString();
+                if (seenUrls.has(absoluteUrl)) return;
+
+                const linkText = $(el).text().trim();
+                const lowerText = linkText.toLowerCase();
+                const keywords = ["win", "competition", "prize", "giveaway", "draw"];
+
+                if (keywords.some((k) => lowerText.includes(k))) {
+                    results.push({
+                        url: absoluteUrl,
+                        title: linkText,
+                        context: $.html($(el).parent()), // Include parent for context
+                    });
+                    seenUrls.add(absoluteUrl);
+                }
+            } catch {
+                /* ignore */
+            }
+        });
+    }
+
+    // Sort by Title length (heuristics for better names) and limit
+    return results
+        .filter((r) => r.title.length > 3)
+        .slice(0, 40); // cap at 40 per landing page
+}
+
 // ─── Polite delay ─────────────────────────────────────────────────────────────
 
 const INTER_REQUEST_DELAY_MS = 2_000;
@@ -197,17 +298,34 @@ async function crawl(site: SeedSite, maxPages: number): Promise<number> {
         try {
             const html = await fetchPage(url);
 
-            // Publish raw HTML + metadata for the converter to process.
-            await publish({
-                sourceUrl: url,
-                sourceSite: site.name,
-                siteType: site.type,
-                fetchedAt: new Date().toISOString(),
-                htmlExcerpt: html.slice(0, 50_000), // cap to 50 kB per message
-            });
+            if (site.type === "aggregator" || site.type === "forum") {
+                const entries = discoverLinks(html, url, site.type);
+                console.log(`[scout] discovered ${entries.length} entries on ${site.name}`);
 
-            published++;
-            console.log(`[scout] published raw listing for site="${site.name}" page=${page}`);
+                for (const entry of entries) {
+                    await publish({
+                        sourceUrl: entry.url,
+                        sourceSite: site.name,
+                        siteType: site.type,
+                        fetchedAt: new Date().toISOString(),
+                        htmlExcerpt: entry.context.slice(0, 5000), // Focused snippet
+                        title: entry.title,
+                    });
+                    published++;
+                }
+            } else {
+                // Direct brand page — publish at once
+                await publish({
+                    sourceUrl: url,
+                    sourceSite: site.name,
+                    siteType: site.type,
+                    fetchedAt: new Date().toISOString(),
+                    htmlExcerpt: html.slice(0, 50000), // Larger excerpt for brand pages
+                });
+                published++;
+            }
+
+            console.log(`[scout] processed site="${site.name}" page=${page} — published ${published} listings total`);
 
             // ── Polite delay ──────────────────────────────────────────────────
             // Wait between requests to avoid hammering any single site.
