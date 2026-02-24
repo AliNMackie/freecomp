@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Sparkles, Search, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface AIAssistantProps {
     onSearch?: (query: string) => void;
@@ -11,17 +12,20 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ onSearch }) => {
     const [query, setQuery] = useState('');
     const [loading, setLoading] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
+    const router = useRouter();
 
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!query.trim()) return;
 
+        setLoading(true);
         if (onSearch) {
-            setLoading(true);
             onSearch(query);
-            // Simulate/wait if needed, but for now just trigger
-            setLoading(false);
+        } else {
+            // Default behavior: redirect to competitions page with search query
+            router.push(`/competitions?q=${encodeURIComponent(query)}`);
         }
+        setLoading(false);
     };
 
     return (

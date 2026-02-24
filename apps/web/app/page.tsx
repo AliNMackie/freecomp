@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Menu, Zap, Coins, Clock, ArrowUpDown } from 'lucide-react';
+import { Menu, Zap, Coins, Clock, ArrowUpDown, Sparkles } from 'lucide-react';
 import type { Competition } from "@ukfreecomps/shared";
 import { HeroSection } from "../components/HeroSection";
 import { AIAssistant } from "../components/AIAssistant";
@@ -176,14 +176,14 @@ export default async function HomePage() {
                     {/* Quick Filters Pill Row */}
                     <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
                         <QuickFilterPill
-                            label="Quick Entry"
-                            icon={<Zap size={12} className="text-amber-500" />}
-                            href="/competitions?effort=low"
-                        />
-                        <QuickFilterPill
                             label="Cash Prizes"
                             icon={<Coins size={12} className="text-emerald-500" />}
-                            href="/competitions?category=cash"
+                            href="/competitions?q=cash"
+                        />
+                        <QuickFilterPill
+                            label="Gaming"
+                            icon={<Sparkles size={12} className="text-indigo-500" />}
+                            href="/competitions?q=gaming"
                         />
                         <QuickFilterPill
                             label="Ending Soon"

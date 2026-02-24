@@ -97,6 +97,7 @@ export const dynamic = "force-dynamic";
 
 export default async function CompetitionsPage({ searchParams }: PageProps) {
     const isFreeParam = searchParams["isFree"];
+    const qParam = searchParams["q"];
     const sortParam = (searchParams["sort"] as string | undefined) ?? "closing";
     const limitParam = searchParams["limit"];
 
@@ -104,6 +105,7 @@ export default async function CompetitionsPage({ searchParams }: PageProps) {
     if (isFreeParam === "true") params["isFree"] = "true";
     if (isFreeParam === "false") params["isFree"] = "false";
     if (typeof limitParam === "string") params["limit"] = limitParam;
+    if (typeof qParam === "string") params["q"] = qParam;
 
     const competitions = await fetchCompetitions(params);
 
@@ -116,8 +118,13 @@ export default async function CompetitionsPage({ searchParams }: PageProps) {
                             ← Home
                         </Link>
                         <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                            All Competitions
+                            {qParam ? `Search: ${qParam}` : "All Competitions"}
                         </h1>
+                        {qParam && (
+                            <Link href="/competitions" className="text-xs text-indigo-500 hover:text-indigo-600">
+                                Clear
+                            </Link>
+                        )}
                     </div>
 
                     {/* Filter chips */}

@@ -44,6 +44,7 @@ function rowToCompetition(row: CompetitionRow): Competition {
 export async function GET(request: NextRequest): Promise<NextResponse> {
     const { searchParams } = new URL(request.url);
     const isFreeParam = searchParams.get("isFree");
+    const q = searchParams.get("q");
     const sort = searchParams.get("sort"); // "closing" (default) | "hype"
     const limitRaw = parseInt(searchParams.get("limit") ?? "50", 10);
     const limit = Math.min(Math.max(Number.isFinite(limitRaw) ? limitRaw : 50, 1), 100);
@@ -58,6 +59,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     } else if (isFreeParam === "false") {
         conditions.push(`is_free = $${values.length + 1}`);
         values.push(false);
+    }
+
+    if (q) {
+        conditions.push(`(title ILIKE $${values.length + 1} OR prize_summary ILIKE $${values.length + 1} OR curated_summary ILIKE $${values.length + 1})`);
+        values.push(`%${q}%`);
     }
 
     const where =
