@@ -148,25 +148,27 @@ function buildHeuristicSummary(
 function buildSummaryPrompt(
     title: string,
     sourceSite: string,
+    discoverySite: string,
     htmlExcerpt: string
 ): string {
     return `You are helping write short, human-sounding descriptions of online prize competitions for a UK competition listing site.
 
 Input:
 - Proposed Title: ${title}
-- Found on: ${sourceSite} (This is the aggregator or forum, NOT necessarily the prize provider)
+- Discovery Site: ${discoverySite} (The listing site where we found this)
+- Target Brand Website: ${sourceSite}
 - HTML snippet: ${htmlExcerpt.slice(0, HTML_EXCERPT_CHARS)}
 
 Task:
 Write 2–3 natural sentences that:
 - Identify the REAL prize being offered.
-- Identify the ACTUAL brand running the competition if mentioned (e.g. "Lidl", "Tesco", "Magic Radio").
+- Identify the ACTUAL brand running the competition (e.g. "Lidl", "Tesco", "Magic Radio"). If the Target Brand Website is already the brand, use that.
 - Briefly describe the entry method (e.g. "simple form", "social media share", "trivia question").
 - Sounds like a real human "comper" recommending it to a friend.
 
 Constraints:
-- Do NOT describe ${sourceSite} itself (we know it's a listing site).
-- If the HTML appears to be just an advertisement for ${sourceSite}, return "HOUSE_AD".
+- Do NOT describe ${discoverySite} itself.
+- If the HTML appears to be just an advertisement for ${discoverySite}, return "HOUSE_AD".
 - Do NOT copy text verbatim; always paraphrase.
 - Return only the description text, no JSON or quotes.`;
 }
@@ -176,9 +178,9 @@ Constraints:
  * Returns the raw text response, or throws on failure.
  */
 async function callGeminiSummary(
-    input: { title: string; sourceSite: string; html_excerpt: string }
+    input: { title: string; sourceSite: string; discoverySite: string; html_excerpt: string }
 ): Promise<string> {
-    const prompt = buildSummaryPrompt(input.title, input.sourceSite, input.html_excerpt);
+    const prompt = buildSummaryPrompt(input.title, input.sourceSite, input.discoverySite, input.html_excerpt);
 
     const modelName = GEMINI_MODEL.startsWith("models/") ? GEMINI_MODEL : `models/${GEMINI_MODEL}`;
     const endpoint =
@@ -237,6 +239,7 @@ async function callGeminiSummary(
 async function generateCuratedSummaryWithGemini(input: {
     title: string;
     sourceSite: string;
+    discoverySite: string;
     html_excerpt: string;
     heuristicFallback: string;
 }): Promise<string> {
@@ -250,6 +253,7 @@ async function generateCuratedSummaryWithGemini(input: {
             const summary = await callGeminiSummary({
                 title: input.title,
                 sourceSite: input.sourceSite,
+                discoverySite: input.discoverySite,
                 html_excerpt: input.html_excerpt,
             });
             const capped = capSummary(summary);
@@ -287,10 +291,12 @@ async function toCompetition(payload: any): Promise<Competition> {
     const html = payload.htmlExcerpt ?? payload.html ?? "";
 
     let sourceSite: string;
+    let discoverySite: string = payload.sourceSite ?? "unknown";
+
     try {
         sourceSite = new URL(url).hostname.replace(/^www\./, "");
     } catch {
-        sourceSite = payload.sourceSite ?? "unknown";
+        sourceSite = discoverySite;
     }
 
     const prizeSummary = inferPrizeSummary(html, title);
@@ -304,6 +310,7 @@ async function toCompetition(payload: any): Promise<Competition> {
     const curatedSummary = await generateCuratedSummaryWithGemini({
         title,
         sourceSite,
+        discoverySite,
         html_excerpt: html,
         heuristicFallback: heuristicSummary,
     });

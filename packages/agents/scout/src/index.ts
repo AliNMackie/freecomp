@@ -154,6 +154,37 @@ async function isAllowed(url: string): Promise<boolean> {
     return true;
 }
 
+// ─── URL Resolver ─────────────────────────────────────────────────────────────
+
+/**
+ * Follows redirects to find the final destination URL.
+ * Targeted at aggregator "out" links.
+ */
+async function resolveUrl(url: string, sourceOrigin: string): Promise<string> {
+    try {
+        const parsed = new URL(url);
+        // If it's already a different domain than where we found it, it's likely a direct link
+        // (but some aggregators use direct links that still redirect, we follow anyway)
+
+        const res = await fetch(url, {
+            method: "HEAD",
+            headers: { "User-Agent": USER_AGENT },
+            redirect: "follow",
+            signal: AbortSignal.timeout(5000),
+        });
+
+        const finalUrl = res.url || url;
+        const finalParsed = new URL(finalUrl);
+
+        // If it's still on the same aggregator origin, it might be a internal "interstitial" or just a forum post
+        // We return it anyway, but we've at least followed any quick redirects.
+        return finalUrl;
+    } catch (err) {
+        // Fallback to original URL on timeout or error
+        return url;
+    }
+}
+
 // ─── Link Discovery ───────────────────────────────────────────────────────────
 
 interface DiscoveredEntry {
@@ -184,6 +215,8 @@ function discoverLinks(html: string, baseUrl: string, siteType: string): Discove
 
     // Attempt to find structured entries first
     let foundStructured = false;
+    const baseOrigin = new URL(baseUrl).origin;
+
     for (const selector of entrySelectors) {
         const potentialEntries = $(selector).has("a");
         if (potentialEntries.length >= 5) {
@@ -197,10 +230,21 @@ function discoverLinks(html: string, baseUrl: string, siteType: string): Discove
                     const absoluteUrl = new URL(href, baseUrl).toString();
                     if (seenUrls.has(absoluteUrl)) return;
 
-                    // Filter out noise
                     const lowerHref = absoluteUrl.toLowerCase();
+                    const urlParsed = new URL(absoluteUrl);
+
+                    // --- STRICT FILTERING FOR "DIRECT" DISCOVERY ---
+                    // 1. Ignore login/reg/terms
                     if (lowerHref.includes("login") || lowerHref.includes("register")) return;
-                    if (lowerHref.includes("terms") || lowerHref.includes("privacy")) return;
+                    if (lowerHref.includes("terms") || lowerHref.includes("privacy") || lowerHref.includes("cookies")) return;
+
+                    // 2. Ignore internal links to common aggregator sections (search, forum index, member profiles)
+                    if (urlParsed.origin === baseOrigin) {
+                        const path = urlParsed.pathname;
+                        if (path === "/" || path === "/index.php" || path === "/forum.php") return;
+                        if (path.startsWith("/members/") || path.startsWith("/search/")) return;
+                        if (path.startsWith("/style/")) return; // CSS/assets
+                    }
 
                     const title = link.text().trim() || $(el).text().trim().slice(0, 50);
                     if (title.length < 5) return;
@@ -230,15 +274,20 @@ function discoverLinks(html: string, baseUrl: string, siteType: string): Discove
                 const absoluteUrl = new URL(href, baseUrl).toString();
                 if (seenUrls.has(absoluteUrl)) return;
 
+                const urlParsed = new URL(absoluteUrl);
+                const isExternal = urlParsed.origin !== baseOrigin;
                 const linkText = $(el).text().trim();
                 const lowerText = linkText.toLowerCase();
                 const keywords = ["win", "competition", "prize", "giveaway", "draw"];
 
-                if (keywords.some((k) => lowerText.includes(k))) {
+                // On aggregators, we REALLY prefer external links OR links containing "out" / "exit"
+                const isOutLink = lowerText.includes("enter") || absoluteUrl.includes("/out") || absoluteUrl.includes("/exit");
+
+                if (keywords.some((k) => lowerText.includes(k)) || (isExternal && isOutLink)) {
                     results.push({
                         url: absoluteUrl,
                         title: linkText,
-                        context: $.html($(el).parent()), // Include parent for context
+                        context: $.html($(el).parent()),
                     });
                     seenUrls.add(absoluteUrl);
                 }
@@ -248,9 +297,16 @@ function discoverLinks(html: string, baseUrl: string, siteType: string): Discove
         });
     }
 
-    // Sort by Title length (heuristics for better names) and limit
+    // Sort: prioritise external links as they are more likely to be the destination
     return results
         .filter((r) => r.title.length > 3)
+        .sort((a, b) => {
+            const aExt = new URL(a.url).origin !== baseOrigin;
+            const bExt = new URL(b.url).origin !== baseOrigin;
+            if (aExt && !bExt) return -1;
+            if (!aExt && bExt) return 1;
+            return 0;
+        })
         .slice(0, 40); // cap at 40 per landing page
 }
 
@@ -303,8 +359,14 @@ async function crawl(site: SeedSite, maxPages: number): Promise<number> {
                 console.log(`[scout] discovered ${entries.length} entries on ${site.name}`);
 
                 for (const entry of entries) {
+                    // Resolve redirects for aggregator links
+                    const resolvedUrl = await resolveUrl(entry.url, url);
+                    if (resolvedUrl !== entry.url) {
+                        console.log(`[scout] resolved: ${entry.url.slice(0, 40)}... -> ${resolvedUrl.slice(0, 40)}...`);
+                    }
+
                     await publish({
-                        sourceUrl: entry.url,
+                        sourceUrl: resolvedUrl,
                         sourceSite: site.name,
                         siteType: site.type,
                         fetchedAt: new Date().toISOString(),
