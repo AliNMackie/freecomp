@@ -241,14 +241,20 @@ function discoverLinks(html: string, baseUrl: string, siteType: string): Discove
                     // 2. Ignore internal links to common aggregator sections (search, forum index, member profiles)
                     if (urlParsed.origin === baseOrigin) {
                         const path = urlParsed.pathname;
+                        const search = urlParsed.search;
                         if (path === "/" || path === "/index.php" || path === "/forum.php") return;
-                        if (path.startsWith("/members/") || path.startsWith("/search/") || path.startsWith("/user/")) return;
+                        if (path.startsWith("/members/") || path.startsWith("/search/") || path.startsWith("/user/") || path.startsWith("/discussions")) return;
                         if (path.startsWith("/tag/") || path.startsWith("/tags/") || path.startsWith("/category/")) return;
+                        if (search.includes("tagID=") || search.includes("categoryID=")) return;
                         if (path.startsWith("/style/")) return; // CSS/assets
                     }
 
-                    const title = link.text().trim() || $(el).text().trim().slice(0, 50);
+                    const title = (link.text().trim() || $(el).text().trim()).slice(0, 50);
                     if (title.length < 5) return;
+
+                    // 3. Ignore explicit MSE noise titles
+                    const noiseTitles = ["expert answered", "aae1", "aae2", "aae3", "aae4", "aae5", "discussions", "announcements"];
+                    if (noiseTitles.some(t => title.toLowerCase().includes(t))) return;
 
                     results.push({
                         url: absoluteUrl,
