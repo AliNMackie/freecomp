@@ -242,7 +242,8 @@ function discoverLinks(html: string, baseUrl: string, siteType: string): Discove
                     if (urlParsed.origin === baseOrigin) {
                         const path = urlParsed.pathname;
                         if (path === "/" || path === "/index.php" || path === "/forum.php") return;
-                        if (path.startsWith("/members/") || path.startsWith("/search/")) return;
+                        if (path.startsWith("/members/") || path.startsWith("/search/") || path.startsWith("/user/")) return;
+                        if (path.startsWith("/tag/") || path.startsWith("/tags/") || path.startsWith("/category/")) return;
                         if (path.startsWith("/style/")) return; // CSS/assets
                     }
 
@@ -359,10 +360,54 @@ async function crawl(site: SeedSite, maxPages: number): Promise<number> {
                 console.log(`[scout] discovered ${entries.length} entries on ${site.name}`);
 
                 for (const entry of entries) {
+                    let finalSourceUrl = entry.url;
+                    let finalContext = entry.context;
+
+                    // Deep-Crawl: If it's an internal aggregator detail page (and not obviously an out-link), fetch it to find the real brand link
+                    const isInternal = new URL(entry.url).origin === new URL(url).origin;
+                    const isOutLinkRoute = entry.url.includes("/out") || entry.url.includes("/visit") || entry.url.includes("/go");
+
+                    if (isInternal && !isOutLinkRoute) {
+                        try {
+                            const detailHtml = await fetchPage(entry.url);
+                            const $detail = cheerio.load(detailHtml);
+                            let foundExternal = false;
+
+                            $detail("a").each((_, a) => {
+                                if (foundExternal) return;
+                                const href = $detail(a).attr("href");
+                                if (!href) return;
+
+                                try {
+                                    const abs = new URL(href, entry.url).toString();
+                                    const absOrigin = new URL(abs).origin;
+                                    const path = new URL(abs).pathname;
+
+                                    // Skip social sharing links
+                                    if (absOrigin.includes("facebook.com") || absOrigin.includes("twitter.com") || absOrigin.includes("whatsapp.com")) return;
+
+                                    if (absOrigin !== new URL(url).origin) {
+                                        finalSourceUrl = abs;
+                                        foundExternal = true;
+                                    } else if (path.startsWith("/out") || path.startsWith("/visit") || path.startsWith("/go")) {
+                                        finalSourceUrl = abs;
+                                        foundExternal = true;
+                                    }
+                                } catch { }
+                            });
+
+                            // If we found the detail page, provide the detail page HTML to Gemini (it has more info!)
+                            finalContext = detailHtml;
+                            await sleep(500); // Polite delay for deep crawling
+                        } catch (e) {
+                            console.warn(`[scout] Failed to fetch detail page ${entry.url}`);
+                        }
+                    }
+
                     // Resolve redirects for aggregator links
-                    const resolvedUrl = await resolveUrl(entry.url, url);
-                    if (resolvedUrl !== entry.url) {
-                        console.log(`[scout] resolved: ${entry.url.slice(0, 40)}... -> ${resolvedUrl.slice(0, 40)}...`);
+                    const resolvedUrl = await resolveUrl(finalSourceUrl, url);
+                    if (resolvedUrl !== finalSourceUrl) {
+                        console.log(`[scout] resolved: ${finalSourceUrl.slice(0, 40)}... -> ${resolvedUrl.slice(0, 40)}...`);
                     }
 
                     await publish({
@@ -370,7 +415,7 @@ async function crawl(site: SeedSite, maxPages: number): Promise<number> {
                         sourceSite: site.name,
                         siteType: site.type,
                         fetchedAt: new Date().toISOString(),
-                        htmlExcerpt: entry.context.slice(0, 5000), // Focused snippet
+                        htmlExcerpt: finalContext.slice(0, 5000), // Focused snippet or detail page segment
                         title: entry.title,
                     });
                     published++;
