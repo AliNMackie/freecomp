@@ -243,7 +243,7 @@ function discoverLinks(html: string, baseUrl: string, siteType: string): Discove
                         const path = urlParsed.pathname;
                         const search = urlParsed.search;
                         if (path === "/" || path === "/index.php" || path === "/forum.php") return;
-                        if (path.startsWith("/members/") || path.startsWith("/search/") || path.startsWith("/user/") || path.startsWith("/discussions")) return;
+                        if (path.startsWith("/members/") || path.startsWith("/search/") || path.startsWith("/user/") || path.startsWith("/discussions") || path.startsWith("/categories")) return;
                         if (path.startsWith("/tag/") || path.startsWith("/tags/") || path.startsWith("/category/")) return;
                         if (search.includes("tagID=") || search.includes("categoryID=")) return;
                         if (path.startsWith("/style/")) return; // CSS/assets
