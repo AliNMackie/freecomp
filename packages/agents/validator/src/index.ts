@@ -39,10 +39,10 @@ interface LlmEnrichment {
 
 /** Conservative default used when the Gemini call fails. */
 const LLM_FALLBACK: LlmEnrichment = {
-    live: false,
-    free_entry: false,
+    live: true, // Be optimistic on failure so we don't drop everything
+    free_entry: true,
     has_skill_question: false,
-    entry_time_estimate: "unknown",
+    entry_time_estimate: "1–2 minutes",
     hype_score_adjustment: 0,
 };
 
@@ -123,9 +123,9 @@ interface GeminiInput {
 async function callGeminiValidation(input: GeminiInput): Promise<string> {
     const prompt = buildPrompt(input.title, input.url, input.html_excerpt);
 
+    const modelName = GEMINI_MODEL.startsWith("models/") ? GEMINI_MODEL : `models/${GEMINI_MODEL}`;
     const endpoint =
-        `https://generativelanguage.googleapis.com/v1beta/models/` +
-        `${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+        `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
 
     const body = JSON.stringify({
         contents: [

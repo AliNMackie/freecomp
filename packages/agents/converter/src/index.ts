@@ -180,9 +180,9 @@ async function callGeminiSummary(
 ): Promise<string> {
     const prompt = buildSummaryPrompt(input.title, input.sourceSite, input.html_excerpt);
 
+    const modelName = GEMINI_MODEL.startsWith("models/") ? GEMINI_MODEL : `models/${GEMINI_MODEL}`;
     const endpoint =
-        `https://generativelanguage.googleapis.com/v1beta/models/` +
-        `${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+        `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
 
     const body = JSON.stringify({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
