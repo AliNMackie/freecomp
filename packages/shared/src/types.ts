@@ -49,4 +49,33 @@ export interface Competition {
 
     /** ISO 8601 datetime when a human or validator agent last verified the listing, or null */
     verifiedAt: string | null;
+
+    // ─── Compliance Fields ───────────────────────────────────────────────────
+
+    /** 
+     * The legal classification for the UK market.
+     * 'free_draw': No purchase, chance-based.
+     * 'prize_competition': Skill-based, purchase permitted.
+     */
+    exemptionType: "free_draw" | "prize_competition" | "unknown";
+
+    /** Specific flag for skill/knowledge tests */
+    skillTestRequired: boolean;
+
+    /** Indicates if the entry requires signing up to a recurring paid subscription */
+    subscriptionRisk: boolean;
+
+    /** Whether the free entry route has been explicitly verified as functional */
+    freeRouteVerified: boolean;
+
+    /** Indicates if a premium rate number (e.g., 09) was detected */
+    premiumRateDetected: boolean;
+
+    // ─── UI / Analytics Fields ───────────────────────────────────────────────
+
+    /** URL for the brand's logo */
+    brandLogoUrl: string | null;
+
+    /** Number of outbound clicks generated */
+    clickCount: number;
 }

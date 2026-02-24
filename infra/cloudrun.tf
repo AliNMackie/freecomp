@@ -60,11 +60,6 @@ resource "google_cloud_run_v2_service" "scout" {
     }
   }
 
-  lifecycle {
-    ignore_changes = [
-      template[0].containers[0].image,
-    ]
-  }
 }
 
 # ─── Cloud Run v2 — converter-agent ──────────────────────────────────────────
@@ -136,11 +131,7 @@ resource "google_cloud_run_v2_service" "converter" {
     }
   }
 
-  lifecycle {
-    ignore_changes = [
-      template[0].containers[0].image,
-    ]
-  }
+
 }
 
 # ─── Cloud Run v2 — validator-agent ──────────────────────────────────────────
@@ -212,11 +203,7 @@ resource "google_cloud_run_v2_service" "validator" {
     }
   }
 
-  lifecycle {
-    ignore_changes = [
-      template[0].containers[0].image,
-    ]
-  }
+
 }
 
 # ─── Cloud Run v2 — sink-agent ───────────────────────────────────────────────
@@ -297,11 +284,7 @@ resource "google_cloud_run_v2_service" "sink" {
     }
   }
 
-  lifecycle {
-    ignore_changes = [
-      template[0].containers[0].image,
-    ]
-  }
+
 }
 
 # ─── IAM — Pub/Sub subscriber for the sink topic ─────────────────────────────

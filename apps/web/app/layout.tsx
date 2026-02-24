@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Script from "next/script";
+import { NativeTracker } from "@/components/NativeTracker";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -45,7 +47,20 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en">
-            <body>{children}</body>
+            <body>
+                {children}
+
+                {/* Skimlinks Client-Side Fallback snippet */}
+                {process.env.SKIMLINKS_SITE_ID && (
+                    <Script
+                        src={`https://s.skimresources.com/js/${process.env.SKIMLINKS_SITE_ID}.skimlinks.js`}
+                        strategy="afterInteractive"
+                    />
+                )}
+
+                {/* Zero-Cookie Privacy-First Tracker */}
+                <NativeTracker />
+            </body>
         </html>
     );
 }

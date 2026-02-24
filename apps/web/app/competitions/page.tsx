@@ -19,6 +19,13 @@ interface CompetitionRow {
     curated_summary: string;
     discovered_at: Date;
     verified_at: Date | null;
+    exemption_type: "free_draw" | "prize_competition" | "unknown";
+    skill_test_required: boolean;
+    free_route_verified: boolean;
+    subscription_risk: boolean;
+    premium_rate_detected: boolean;
+    brand_logo_url: string | null;
+    click_count: number;
 }
 
 function rowToCompetition(row: CompetitionRow): Competition {
@@ -37,6 +44,13 @@ function rowToCompetition(row: CompetitionRow): Competition {
         curatedSummary: row.curated_summary,
         discoveredAt: row.discovered_at.toISOString(),
         verifiedAt: row.verified_at ? row.verified_at.toISOString() : null,
+        exemptionType: row.exemption_type,
+        skillTestRequired: row.skill_test_required,
+        freeRouteVerified: row.free_route_verified,
+        subscriptionRisk: row.subscription_risk,
+        premiumRateDetected: row.premium_rate_detected,
+        brandLogoUrl: row.brand_logo_url,
+        clickCount: row.click_count,
     };
 }
 

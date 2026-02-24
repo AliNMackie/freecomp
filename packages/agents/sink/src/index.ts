@@ -59,10 +59,16 @@ const UPSERT_SQL = `
     hype_score,
     curated_summary,
     discovered_at,
-    verified_at
+    verified_at,
+    exemption_type,
+    skill_test_required,
+    free_route_verified,
+    subscription_risk,
+    premium_rate_detected
   ) VALUES (
     $1, $2, $3, $4, $5, $6, $7,
-    $8, $9, $10, $11, $12, $13, $14
+    $8, $9, $10, $11, $12, $13, $14,
+    $15, $16, $17, $18, $19
   )
   ON CONFLICT (id) DO UPDATE SET
     source_url          = EXCLUDED.source_url,
@@ -77,7 +83,12 @@ const UPSERT_SQL = `
     hype_score          = EXCLUDED.hype_score,
     curated_summary     = EXCLUDED.curated_summary,
     discovered_at       = EXCLUDED.discovered_at,
-    verified_at         = EXCLUDED.verified_at
+    verified_at         = EXCLUDED.verified_at,
+    exemption_type      = EXCLUDED.exemption_type,
+    skill_test_required = EXCLUDED.skill_test_required,
+    free_route_verified = EXCLUDED.free_route_verified,
+    subscription_risk   = EXCLUDED.subscription_risk,
+    premium_rate_detected = EXCLUDED.premium_rate_detected
 `;
 
 async function upsertCompetition(
@@ -99,6 +110,11 @@ async function upsertCompetition(
         comp.curatedSummary,
         comp.discoveredAt,
         comp.verifiedAt ?? null,
+        comp.exemptionType ?? "unknown",
+        comp.skillTestRequired ?? false,
+        comp.freeRouteVerified ?? false,
+        comp.subscriptionRisk ?? false,
+        comp.premiumRateDetected ?? false,
     ]);
 }
 

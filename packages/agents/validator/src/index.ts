@@ -35,6 +35,11 @@ interface LlmEnrichment {
     has_skill_question: boolean;
     entry_time_estimate: string;
     hype_score_adjustment: number; // clamped −3 … +3
+    exemption_type: "free_draw" | "prize_competition" | "unknown";
+    free_route_verified: boolean;
+    skill_test_required: boolean;
+    subscription_risk: boolean;
+    premium_rate_detected: boolean;
 }
 
 /** Conservative default used when the Gemini call fails. */
@@ -44,6 +49,11 @@ const LLM_FALLBACK: LlmEnrichment = {
     has_skill_question: false,
     entry_time_estimate: "1–2 minutes",
     hype_score_adjustment: 0,
+    exemption_type: "unknown",
+    free_route_verified: false,
+    skill_test_required: false,
+    subscription_risk: false,
+    premium_rate_detected: false,
 };
 
 // ─── Gemini prompt ────────────────────────────────────────────────────────────
@@ -55,6 +65,7 @@ Your job:
 - Decide if the competition is still LIVE.
 - Decide if there is a FREE ENTRY route (no payment required to enter).
 - Decide if a SKILL QUESTION is required (e.g. quiz question, 'spot the ball', tie-breaker answer).
+- Determine UK Gambling Act compliance metrics: exemption_type, free_route_verified, skill_test_required, subscription_risk, and premium_rate_detected.
 - Estimate TIME TO ENTER based on how complex the entry is.
 - Optionally adjust a hype score.
 
@@ -65,6 +76,11 @@ JSON schema:
   "live": boolean,
   "free_entry": boolean,
   "has_skill_question": boolean,
+  "exemption_type": string, // "free_draw" | "prize_competition" | "unknown"
+  "free_route_verified": boolean,
+  "skill_test_required": boolean,
+  "subscription_risk": boolean,
+  "premium_rate_detected": boolean,
   "entry_time_estimate": string,   // e.g. "30 seconds", "2–3 minutes"
   "hype_score_adjustment": number  // between -3 and 3
 }
@@ -73,11 +89,16 @@ Guidelines:
 - live: false if the page clearly says closed/ended or has a past closing date.
 - free_entry: true only if the main way to enter does NOT require payment (ignore optional extra-pay entries).
 - has_skill_question: true if there is any question that requires knowledge/creativity beyond just filling a form.
+- exemption_type: "free_draw" if entry is purely chance with no payment or via a free route (e.g., postal). "prize_competition" if a significant skill test prevents a large proportion of people from entering or winning. "unknown" if unclear.
+- free_route_verified: true if a free entry route (like postal or free web entry) is explicitly mentioned and verified in the text.
+- skill_test_required: true if a non-trivial skill, judgment, or knowledge test is required.
+- subscription_risk: true if entry clearly requires signing up to a recurring paid subscription.
+- premium_rate_detected: true if the text mentions premium rate phone numbers (e.g. starting with 09) or text messages that cost significant money.
 - entry_time_estimate:
   - "30–60 seconds" if it's just name/email/postcode.
   - "2–3 minutes" if social follows, shares, or multiple steps.
   - "5+ minutes" if long forms, uploads, essays, or multiple tasks.
-- hype_score_adjustment:
+  - hype_score_adjustment:
   - +2 to +3 for very high-value prizes (cars, flagship phones, big holidays).
   - +1 for attractive mid-range prizes.
   - 0 for average.
@@ -196,10 +217,20 @@ function normaliseLlmResponse(raw: unknown): LlmEnrichment {
 
     const r = raw as Record<string, unknown>;
 
+    let exemptionType: "free_draw" | "prize_competition" | "unknown" = "unknown";
+    if (r.exemption_type === "free_draw" || r.exemption_type === "prize_competition") {
+        exemptionType = r.exemption_type as "free_draw" | "prize_competition";
+    }
+
     return {
         live: !!r.live,
         free_entry: !!r.free_entry,
         has_skill_question: !!r.has_skill_question,
+        exemption_type: exemptionType,
+        free_route_verified: !!r.free_route_verified,
+        skill_test_required: !!r.skill_test_required,
+        subscription_risk: !!r.subscription_risk,
+        premium_rate_detected: !!r.premium_rate_detected,
         entry_time_estimate:
             typeof r.entry_time_estimate === "string" && r.entry_time_estimate.trim()
                 ? r.entry_time_estimate.trim()
@@ -333,6 +364,11 @@ async function processCompetition(
         entryTimeEstimate: enrichment.entry_time_estimate,
         hypeScore: newHype,
         verifiedAt: new Date().toISOString(),
+        exemptionType: enrichment.exemption_type,
+        freeRouteVerified: enrichment.free_route_verified,
+        skillTestRequired: enrichment.skill_test_required,
+        subscriptionRisk: enrichment.subscription_risk,
+        premiumRateDetected: enrichment.premium_rate_detected,
     };
 
     // 5. Publish

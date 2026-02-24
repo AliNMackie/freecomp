@@ -22,7 +22,7 @@ export const FeaturedSection: React.FC<FeaturedSectionProps> = ({ competitions }
                 {competitions.slice(0, 2).map((comp) => (
                     <a
                         key={comp.id}
-                        href={comp.sourceUrl}
+                        href={`/api/go/${comp.id}`}
                         target="_blank"
                         rel="noopener noreferrer sponsored"
                         className="group relative bg-white rounded-xl border border-slate-200 overflow-hidden hover:border-monzo-blue hover:shadow-lg transition-all duration-300"

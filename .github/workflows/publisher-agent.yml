@@ -1,0 +1,31 @@
+name: Publish Newsletter Draft
+on:
+  schedule:
+    # Run every Thursday at 8:00 AM UTC
+    - cron: '0 8 * * 4'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  draft-newsletter:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        working-directory: ./apps/web
+        run: npm ci
+
+      - name: Run Publisher Agent
+        working-directory: ./apps/web
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          BEEHIIV_API_KEY: ${{ secrets.BEEHIIV_API_KEY }}
+          BEEHIIV_PUBLICATION_ID: ${{ secrets.BEEHIIV_PUBLICATION_ID }}
+        run: npm run publish-draft

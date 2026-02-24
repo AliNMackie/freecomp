@@ -1,10 +1,14 @@
 import Link from "next/link";
-import { Menu, Zap, Coins, Clock, ArrowUpDown, Sparkles } from 'lucide-react';
+import { Zap, ArrowUpDown, Coins, Sparkles, Clock, LayoutGrid, List } from 'lucide-react';
 import type { Competition } from "@ukfreecomps/shared";
-import { HeroSection } from "../components/HeroSection";
-import { AIAssistant } from "../components/AIAssistant";
-import { CompetitionCard } from "../components/CompetitionCard";
-import { FeaturedSection } from "../components/FeaturedSection";
+import { HeroSection } from "@/components/HeroSection";
+import { AIAssistant } from "@/components/AIAssistant";
+import { CompetitionCard } from "@/components/CompetitionCard";
+import { FeaturedSection } from "@/components/FeaturedSection";
+import { ClassicModeTable } from "@/components/ClassicModeTable";
+import { FeedList } from "@/components/FeedList";
+import { Footer } from "@/components/Footer";
+import { EmailCapture } from "@/components/EmailCapture";
 
 import { pool } from "@/lib/db";
 
@@ -25,6 +29,13 @@ interface CompetitionRow {
     curated_summary: string;
     discovered_at: Date;
     verified_at: Date | null;
+    exemption_type: "free_draw" | "prize_competition" | "unknown";
+    skill_test_required: boolean;
+    free_route_verified: boolean;
+    subscription_risk: boolean;
+    premium_rate_detected: boolean;
+    brand_logo_url: string | null;
+    click_count: number;
 }
 
 function rowToCompetition(row: CompetitionRow): Competition {
@@ -43,6 +54,13 @@ function rowToCompetition(row: CompetitionRow): Competition {
         curatedSummary: row.curated_summary,
         discoveredAt: row.discovered_at.toISOString(),
         verifiedAt: row.verified_at ? row.verified_at.toISOString() : null,
+        exemptionType: row.exemption_type,
+        skillTestRequired: row.skill_test_required,
+        freeRouteVerified: row.free_route_verified,
+        subscriptionRisk: row.subscription_risk,
+        premiumRateDetected: row.premium_rate_detected,
+        brandLogoUrl: row.brand_logo_url,
+        clickCount: row.click_count,
     };
 }
 
@@ -157,6 +175,13 @@ export default async function HomePage() {
                     <FeaturedSection competitions={featured} />
                 )}
 
+                {/* Newsletter Signup Banner */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-8 mb-8 text-center shadow-sm">
+                    <h2 className="text-xl font-bold text-slate-800 mb-2">Never miss a genuinely free prize draw</h2>
+                    <p className="text-slate-500 text-sm mb-6 max-w-md mx-auto">Get the best UK competitions delivered straight to your inbox. No spam. No scams.</p>
+                    <EmailCapture />
+                </div>
+
                 {/* List Control Header */}
                 <div className="flex flex-col gap-3 mb-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -193,34 +218,13 @@ export default async function HomePage() {
                     </div>
                 </div>
 
-                {/* High Density List */}
-                <div className="bg-white border sm:border border-slate-200 sm:rounded-xl shadow-sm divide-y divide-slate-100 overflow-hidden">
-                    {allComps.length > 0 ? (
-                        allComps.map((comp: Competition) => (
-                            <CompetitionCard key={comp.id} comp={comp} />
-                        ))
-                    ) : (
-                        <div className="text-center py-24 px-4">
-                            <div className="text-4xl mb-4">⚙️</div>
-                            <h3 className="text-lg font-bold text-slate-800 mb-2">We're indexing competitions right now</h3>
-                            <p className="max-w-sm mx-auto text-sm text-slate-400">
-                                Our scout is out hunting the best free UK competitions.
-                                Check back in a few minutes — they'll be here soon.
-                            </p>
-                        </div>
-                    )}
-                </div>
+                {/* High Density List wrapper using client comp */}
+                <FeedList competitions={allComps} />
             </main>
 
             {/* Footer Area */}
-            <footer className="bg-white border-t border-slate-200 mt-12">
-                <div className="max-w-4xl mx-auto px-4 py-12">
-                    <div className="text-center text-slate-400 text-[10px] leading-relaxed max-w-lg mx-auto">
-                        <p className="mb-2">UKFreeComps is an aggregator. We verify safety but are not responsible for prize fulfillment.</p>
-                        <p>Competitions listed are hosted by third parties. Terms and conditions apply. &copy; {new Date().getFullYear()} UKFreeComps.</p>
-                    </div>
-                </div>
-            </footer>
+            <Footer />
         </div>
     );
 }
+
