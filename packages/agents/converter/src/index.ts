@@ -279,14 +279,18 @@ function capSummary(text: string): string {
 
 // ─── Core transform ───────────────────────────────────────────────────────────
 
-async function toCompetition(payload: ScoutPayload): Promise<Competition> {
-    const { url, scrapedAt, title, html } = payload;
+async function toCompetition(payload: any): Promise<Competition> {
+    // Handle both old and new payload schemas for robustness
+    const url = payload.sourceUrl ?? payload.url;
+    const scrapedAt = payload.fetchedAt ?? payload.scrapedAt ?? new Date().toISOString();
+    const title = payload.title ?? payload.sourceSite ?? "Unknown Competition";
+    const html = payload.htmlExcerpt ?? payload.html ?? "";
 
     let sourceSite: string;
     try {
         sourceSite = new URL(url).hostname.replace(/^www\./, "");
     } catch {
-        sourceSite = url;
+        sourceSite = payload.sourceSite ?? "unknown";
     }
 
     const prizeSummary = inferPrizeSummary(html, title);
