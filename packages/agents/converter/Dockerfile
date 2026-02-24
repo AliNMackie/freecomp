@@ -6,6 +6,10 @@ WORKDIR /app
 
 COPY . .
 
+# Skip Chromium download during install (since we don't need it in this agent)
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
 RUN pnpm install --frozen-lockfile
 
 RUN pnpm --filter @ukfreecomps/converter build

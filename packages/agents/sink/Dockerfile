@@ -12,6 +12,10 @@ WORKDIR /app
 # Copy the entire monorepo to ensure all workspace dependencies and manifests are present
 COPY . .
 
+# Skip Chromium download during install (since we don't need it in this agent)
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
 # Install all dependencies (frozen lockfile for stability)
 RUN pnpm install --frozen-lockfile
 
