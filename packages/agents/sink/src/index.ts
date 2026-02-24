@@ -18,13 +18,15 @@ if (!DATABASE_URL) {
 
 // ─── Postgres pool ────────────────────────────────────────────────────────────
 
+const isCloudSqlSocket = DATABASE_URL.includes("host=/cloudsql");
+
 const pool = new Pool({
     connectionString: DATABASE_URL,
     max: 5,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 5_000,
     ssl:
-        process.env.NODE_ENV === "production"
+        process.env.NODE_ENV === "production" && !isCloudSqlSocket
             ? { rejectUnauthorized: false }
             : false,
 });
