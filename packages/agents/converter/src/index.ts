@@ -12,7 +12,7 @@ const PORT = process.env.PORT ?? "8080";
 
 // Gemini config (optional — heuristics are used when absent)
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY ?? "";
-const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-1.5-flash";
+const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 const GEMINI_TIMEOUT_MS = 12_000;
 const HTML_EXCERPT_CHARS = 4_000;
 const CURATED_SUMMARY_MAX_CHARS = 400;
