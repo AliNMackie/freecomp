@@ -330,6 +330,13 @@ async function toCompetition(payload: any): Promise<Competition> {
         curatedSummary,
         discoveredAt: scrapedAt,
         verifiedAt: null,
+        exemptionType: "unknown",
+        skillTestRequired: false,
+        subscriptionRisk: false,
+        freeRouteVerified: false,
+        premiumRateDetected: false,
+        brandLogoUrl: null,
+        clickCount: 0,
     };
 }
 
