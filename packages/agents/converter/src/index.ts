@@ -342,6 +342,14 @@ async function toCompetition(payload: any): Promise<Competition> {
 
 async function processPayload(raw: ScoutPayload): Promise<Competition> {
     const competition = await toCompetition(raw);
+
+    // Drop house ads — Gemini returns "HOUSE_AD" from the summary prompt when
+    // the page is an advert for the aggregator site itself, not a real competition.
+    if (competition.curatedSummary.includes("HOUSE_AD")) {
+        console.log(`[converter] Dropping house ad: ${competition.sourceUrl}`);
+        throw new Error("HOUSE_AD");
+    }
+
     const buffer = Buffer.from(JSON.stringify(competition));
     await outputTopic.publish(buffer);
     console.log(

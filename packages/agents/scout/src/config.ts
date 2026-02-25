@@ -57,8 +57,8 @@ const DEFAULT_SEED_SITES: SeedSite[] = [
         type: "aggregator",
     },
     {
-        name: "SuperLucky",
-        url: "https://superlucky.me/",
+        name: "ThePrizeFinder Latest",
+        url: "https://www.theprizefinder.com/competitions/new",
         type: "aggregator",
     },
 
