@@ -19,7 +19,7 @@ variable "gemini_api_key" {
 variable "gemini_model" {
   description = "Gemini model name used by converter and validator agents."
   type        = string
-  default     = "models/gemini-1.5-flash"
+  default     = "models/gemini-2.5-flash"
 }
 
 variable "database_url" {
