@@ -9,7 +9,7 @@
 import http from "http";
 import * as cheerio from "cheerio";
 import { PubSub } from "@google-cloud/pubsub";
-import { SEED_SITES, MAX_PAGES_PER_SITE, CRAWL_INTERVAL_SECONDS, SEED_CONFIG_SOURCE } from "./config";
+import { SEED_SITES, MAX_PAGES_PER_SITE, CRAWL_INTERVAL_SECONDS, SEED_CONFIG_SOURCE, KNOWN_AGGREGATORS } from "./config";
 import type { SeedSite } from "./config";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -154,18 +154,27 @@ async function isAllowed(url: string): Promise<boolean> {
     return true;
 }
 
-// ─── URL Resolver ─────────────────────────────────────────────────────────────
+/**
+ * Checks if a URL belongs to a known aggregator domain.
+ */
+function isAggregator(url: string): boolean {
+    try {
+        const hostname = new URL(url).hostname.toLowerCase();
+        return KNOWN_AGGREGATORS.some(agg => hostname === agg || hostname.endsWith("." + agg));
+    } catch {
+        return false;
+    }
+}
 
 /**
- * Follows redirects to find the final destination URL.
- * Targeted at aggregator "out" links.
+ * Recursively follows redirects and aggregator landing pages until a promoter URL is reached.
+ * Returns null if unreachable or loops.
  */
-async function resolveUrl(url: string, sourceOrigin: string): Promise<string> {
-    try {
-        const parsed = new URL(url);
-        // If it's already a different domain than where we found it, it's likely a direct link
-        // (but some aggregators use direct links that still redirect, we follow anyway)
+async function resolvePromoterUrl(url: string, depth = 0): Promise<string | null> {
+    if (depth > 5) return null; // Prevent infinite loops
 
+    try {
+        // 1. Follow HTTP-level redirects
         const res = await fetch(url, {
             method: "HEAD",
             headers: { "User-Agent": USER_AGENT },
@@ -173,15 +182,63 @@ async function resolveUrl(url: string, sourceOrigin: string): Promise<string> {
             signal: AbortSignal.timeout(5000),
         });
 
-        const finalUrl = res.url || url;
-        const finalParsed = new URL(finalUrl);
+        let finalUrl = res.url || url;
 
-        // If it's still on the same aggregator origin, it might be a internal "interstitial" or just a forum post
-        // We return it anyway, but we've at least followed any quick redirects.
-        return finalUrl;
+        // 2. If the final URL is NOT an aggregator, we are done!
+        if (!isAggregator(finalUrl)) {
+            return finalUrl;
+        }
+
+        // 3. If it IS an aggregator, we need to fetch the page and find the CTA link
+        const html = await fetchPage(finalUrl);
+        const $ = cheerio.load(html);
+
+        // Look for common CTA keywords in links
+        let nextUrl: string | null = null;
+        const links: { url: string; text: string; score: number }[] = [];
+
+        $("a").each((_, el) => {
+            const linkText = $(el).text().trim();
+            const lowerText = linkText.toLowerCase();
+            const href = $(el).attr("href");
+            if (!href) return;
+
+            let score = 0;
+            const primaryCtas = ["enter", "enter now", "competition page", "visit site", "visit website", "go to competition"];
+            const secondaryCtas = ["more info", "click here", "details", "visit"];
+            const exclusions = ["login", "register", "sign up", "terms", "privacy", "cookies", "contact", "about"];
+
+            if (exclusions.some(ex => lowerText.includes(ex))) return;
+
+            if (primaryCtas.some(cta => lowerText === cta)) score += 10;
+            else if (primaryCtas.some(cta => lowerText.includes(cta))) score += 5;
+            else if (secondaryCtas.some(cta => lowerText.includes(cta))) score += 2;
+
+            // Special handling for aggregator "out" patterns
+            if (href.includes("/out/") || href.includes("/go/") || href.includes("/visit/")) score += 8;
+
+            if (score > 0) {
+                try {
+                    const absolute = new URL(href, finalUrl).toString();
+                    if (absolute !== finalUrl) {
+                        links.push({ url: absolute, text: linkText, score });
+                    }
+                } catch { }
+            }
+        });
+
+        // Pick the best link
+        if (links.length > 0) {
+            links.sort((a, b) => b.score - a.score);
+            nextUrl = links[0].url;
+            console.log(`[scout] following aggregator link: ${finalUrl} -> ${nextUrl} (score: ${links[0].score}, text: "${links[0].text}")`);
+            return resolvePromoterUrl(nextUrl, depth + 1);
+        }
+
+        return null; // Aggregator but no outgoing link found
     } catch (err) {
-        // Fallback to original URL on timeout or error
-        return url;
+        console.warn(`[scout] failed to resolve ${url}: ${err instanceof Error ? err.message : err}`);
+        return null;
     }
 }
 
@@ -411,7 +468,12 @@ async function crawl(site: SeedSite, maxPages: number): Promise<number> {
                     }
 
                     // Resolve redirects for aggregator links
-                    const resolvedUrl = await resolveUrl(finalSourceUrl, url);
+                    const resolvedUrl = await resolvePromoterUrl(finalSourceUrl);
+                    if (!resolvedUrl) {
+                        console.log(`[scout] could not resolve promoter URL for: ${finalSourceUrl}. Skipping.`);
+                        continue;
+                    }
+
                     if (resolvedUrl !== finalSourceUrl) {
                         console.log(`[scout] resolved: ${finalSourceUrl.slice(0, 40)}... -> ${resolvedUrl.slice(0, 40)}...`);
                     }

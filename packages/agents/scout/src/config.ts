@@ -149,6 +149,31 @@ export const SEED_SITES = loadedConfig.sites;
 export const SEED_CONFIG_SOURCE = loadedConfig.source;
 
 // ─── Crawl constants ──────────────────────────────────────────────────────────
+export const KNOWN_AGGREGATORS = [
+    "loquax.co.uk",
+    "theprizefinder.com",
+    "hotukdeals.com",
+    "competitions-time.co.uk",
+    "compersnews.com",
+    "prizefinder.co.uk",
+    "competitiondatabase.co.uk",
+    "superlucky.me",
+    "latestdeals.co.uk",
+    "moneysavingexpert.com",
+    "prizerunner.co.uk",
+    "competitionhunter.com",
+    "ukdealsandgiveaways.co.uk",
+    "travelscoop.co.uk",
+    "prizesfinder.com",
+    "competitionfox.com",
+    "getmeaticket.co.uk",
+    "rosemaryandporkbelly.co.uk",
+    "newcomps.co.uk",
+    "pickmypostcode.com",
+    "freestuff.eu",
+    "surf4prizes.com",
+    "realcompetitions.com"
+];
 
 /** Maximum number of paginated pages to crawl per site per trigger. */
 export const MAX_PAGES_PER_SITE: number =
